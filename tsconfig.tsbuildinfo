@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/circularareaselector.tsx","./src/components/imagepreview.tsx","./src/components/imageuploader.tsx","./src/components/privacyslider.tsx","./src/tf/autoencodermodel.ts","./src/tf/circularblur.ts","./src/types/file-saver.d.ts"],"version":"5.8.3"}
