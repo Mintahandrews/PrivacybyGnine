@@ -137,42 +137,67 @@ function App() {
               tempImg.src = result;
             });
             
-            // Convert to tensor
+            // Convert to tensor - can't use tf.tidy with async functions
             const tensor = tf.browser.fromPixels(tempImg);
+            
+            // Make sure tensor is 3D with shape [height, width, channels]
+            const tensor3D = tensor.reshape([tensor.shape[0], tensor.shape[1], 3]) as tf.Tensor3D;
             
             // Apply circular effects based on mode
             let finalTensor: tf.Tensor3D;
             
-            if (circleBlurMode === 'blur') {
-              // Apply circular blur with varying intensities
-              finalTensor = await applyCircularBlurs(
-                tensor as tf.Tensor3D,
-                circleAreas,
-                imageDimensions.width,
-                imageDimensions.height
-              );
-            } else {
-              // Hide mode - fill with solid color
-              finalTensor = hideCircularAreas(
-                tensor as tf.Tensor3D,
-                circleAreas,
-                imageDimensions.width,
-                imageDimensions.height,
-                [0, 0, 0] // Black color
-              );
+            try {
+              if (circleBlurMode === 'blur') {
+                // Apply circular blur with varying intensities
+                finalTensor = await applyCircularBlurs(
+                  tensor3D,
+                  circleAreas,
+                  imageDimensions.width,
+                  imageDimensions.height
+                );
+              } else {
+                // Hide mode - fill with solid color
+                finalTensor = hideCircularAreas(
+                  tensor3D,
+                  circleAreas,
+                  imageDimensions.width,
+                  imageDimensions.height,
+                  [0, 0, 0] // Black color
+                );
+              }
+              
+              // Clean up intermediate tensors
+              tensor.dispose();
+              if (tensor3D !== tensor) {
+                tensor3D.dispose();
+              }
+            } catch (err) {
+              console.error('Error applying circular effects:', err);
+              throw err; // Re-throw to be caught by the outer try-catch
             }
             
             // Convert to canvas
             const canvas = document.createElement('canvas');
-            canvas.width = tensor.shape[1];
-            canvas.height = tensor.shape[0];
-            await tf.browser.toPixels(finalTensor, canvas);
+            canvas.width = imageDimensions.width;
+            canvas.height = imageDimensions.height;
             
-            // Get data URL
-            result = canvas.toDataURL('image/png');
-            
-            // Clean up tensors
-            tf.dispose([tensor, finalTensor]);
+            try {
+              // Convert tensor to pixels on canvas
+              await tf.browser.toPixels(finalTensor, canvas);
+              
+              // Get data URL
+              result = canvas.toDataURL('image/png');
+            } catch (err) {
+              console.error('Error converting tensor to pixels:', err);
+              setError('Failed to process image for display');
+              setIsProcessing(false);
+            } finally {
+              // Always clean up tensors to prevent memory leaks
+              finalTensor.dispose();
+              // Force garbage collection in case of any leaked tensors
+              tf.engine().endScope();
+              tf.engine().startScope();
+            }
           } catch (circleErr) {
             console.error('Error applying circular effects:', circleErr);
             // Continue with the original processed image if circular processing fails

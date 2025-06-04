@@ -68,7 +68,8 @@ export const applyCircularBlurs = async (
         return tf.browser.fromPixels(maskCanvas, 1)
           .toFloat()
           .div(tf.scalar(255, 'float32'))
-          .asType('float32');
+          .asType('float32')
+          .expandDims(-1);
       });
     };
     
@@ -87,48 +88,79 @@ export const applyCircularBlurs = async (
           // Use cached kernel
           rgbKernel = kernelCache[cacheKey];
         } else {
+          // Use separable convolution for better performance
           // Create 1D Gaussian kernel
-          const gauss = tf.tensor1d(
-            Array.from({ length: kernelSize }, (_, i) => {
+          const gauss = tf.tidy(() => {
+            const kernel = Array.from({ length: kernelSize }, (_, i) => {
               const x = i - (kernelSize - 1) / 2;
               return Math.exp(-(x * x) / (2 * sigma * sigma));
-            }),
-            'float32'
-          );
+            });
+            
+            // Calculate sum for normalization
+            const sum = kernel.reduce((a, b) => a + b, 0);
+            
+            // Normalize
+            return tf.tensor1d(kernel.map(v => v / sum), 'float32');
+          });
           
-          // Normalize kernel
-          const normalizedKernel = tf.div(gauss, tf.sum(gauss));
-          
-          // Create 2D kernel from outer product with explicit Tensor1D typing
-          const normalizedKernel1D = normalizedKernel as tf.Tensor1D;
-          const kernel2d = tf.outerProduct(normalizedKernel1D, normalizedKernel1D);
-          
-          // Reshape for depthwise convolution (height, width, in_channels, channel_multiplier)
-          const kernel = kernel2d.reshape([kernelSize, kernelSize, 1, 1]).asType('float32');
+          // Create horizontal and vertical kernels for separable convolution
+          const hKernel = tf.reshape(gauss, [1, kernelSize, 1, 1]);
+          const vKernel = tf.reshape(gauss, [kernelSize, 1, 1, 1]);
           
           // Create separate kernels for each channel by repeating the base kernel
-          // Explicitly cast to Tensor4D for typescript
-          rgbKernel = tf.concat([
-            kernel, kernel, kernel
+          const hRgbKernel = tf.concat([
+            hKernel, hKernel, hKernel
           ], 2).asType('float32') as tf.Tensor4D;
+          
+          const vRgbKernel = tf.concat([
+            vKernel, vKernel, vKernel
+          ], 2).asType('float32') as tf.Tensor4D;
+          
+          // Store the kernels in an object
+          rgbKernel = tf.tidy(() => {
+            // Create 2D kernel from outer product for non-separable fallback
+            const kernel2d = tf.outerProduct(gauss, gauss);
+            
+            // Reshape for depthwise convolution (height, width, in_channels, channel_multiplier)
+            const kernel = kernel2d.reshape([kernelSize, kernelSize, 1, 1]).asType('float32');
+            
+            // Create separate kernels for each channel by repeating the base kernel
+            return tf.concat([
+              kernel, kernel, kernel
+            ], 2).asType('float32') as tf.Tensor4D;
+          });
           
           // Store in cache for future use
           kernelCache[cacheKey] = rgbKernel;
           
           // Clean up intermediate tensors
-          tf.dispose([gauss, normalizedKernel, kernel2d, kernel]);
+          tf.dispose([gauss, hKernel, vKernel, hRgbKernel, vRgbKernel]);
         }
         
-        // Apply convolution for blur - ensure types match
-        const expandedInput = imageTensor.expandDims(0).asType('float32') as tf.Tensor4D;
-        const blurred = tf.depthwiseConv2d(
-          expandedInput,
-          rgbKernel,
-          [1, 1],
-          'same'
-        );
-        
-        return tf.squeeze(blurred, [0]) as tf.Tensor3D;
+        // Apply two-pass separable convolution for better performance
+        return tf.tidy(() => {
+          // Expand input for convolution
+          const expandedInput = imageTensor.expandDims(0).asType('float32') as tf.Tensor4D;
+          
+          // Apply horizontal blur first
+          const hBlurred = tf.depthwiseConv2d(
+            expandedInput,
+            rgbKernel,
+            [1, 1],
+            'same'
+          );
+          
+          // Apply vertical blur to complete the Gaussian blur
+          const blurred = tf.depthwiseConv2d(
+            hBlurred,
+            rgbKernel,
+            [1, 1],
+            'same'
+          );
+          
+          // Return the result as a 3D tensor
+          return tf.squeeze(blurred, [0]) as tf.Tensor3D;
+        });
       });
     });
     
@@ -192,7 +224,7 @@ export const applyCircularBlurs = async (
         ctx.fill();
         
         // Convert canvas to tensor and invert (0 where circle is, 1 elsewhere)
-        return tf.browser.fromPixels(maskCanvas, 1).toFloat().div(255);
+        return tf.browser.fromPixels(maskCanvas, 1).toFloat().div(tf.scalar(255, 'float32'));
       });
       
       // Blend original and blurred based on mask

@@ -68,7 +68,7 @@ const CircularAreaSelector: React.FC<CircularAreaSelectorProps> = ({
       ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
       
       // Add semi-transparent overlay to indicate selection mode
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
@@ -88,37 +88,90 @@ const CircularAreaSelector: React.FC<CircularAreaSelectorProps> = ({
       }
       ctx.restore();
       
-      // Draw circle border
+      // Draw circle border with glow effect for selected areas
+      if (isSelected) {
+        // Draw outer glow
+        ctx.beginPath();
+        ctx.arc(area.x, area.y, area.radius + 2, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0, 191, 255, 0.5)';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+      }
+      
+      // Draw main circle border
       ctx.beginPath();
       ctx.arc(area.x, area.y, area.radius, 0, Math.PI * 2);
       ctx.strokeStyle = isSelected ? '#00BFFF' : '#FFFFFF';
-      ctx.lineWidth = isSelected ? 3 : 2;
+      ctx.lineWidth = isSelected ? 2 : 1.5;
       ctx.stroke();
       
-      // Add visual indicator of intensity
+      // Add visual indicator of intensity with gradient
       const intensityRing = Math.max(10, area.radius - 10);
       ctx.beginPath();
       ctx.arc(area.x, area.y, intensityRing, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(255, 255, 255, ${area.blurIntensity/100})`;
-      ctx.lineWidth = 1;
+      
+      // Create gradient for intensity indicator
+      const gradient = ctx.createRadialGradient(
+        area.x, area.y, intensityRing - 5,
+        area.x, area.y, intensityRing
+      );
+      gradient.addColorStop(0, `rgba(255, 255, 255, 0)`);
+      gradient.addColorStop(1, `rgba(255, 255, 255, ${area.blurIntensity/100})`);
+      
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 3;
       ctx.stroke();
 
-      // Draw resize handle for selected area
+      // Draw resize handles for selected area
       if (isSelected) {
-        // Right handle
-        ctx.beginPath();
-        ctx.arc(area.x + area.radius, area.y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = '#00BFFF';
-        ctx.fill();
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 1;
-        ctx.stroke();
+        // Draw multiple handles for better UX
+        const handlePositions = [
+          { x: area.x + area.radius, y: area.y }, // Right
+          { x: area.x - area.radius, y: area.y }, // Left
+          { x: area.x, y: area.y - area.radius }, // Top
+          { x: area.x, y: area.y + area.radius }  // Bottom
+        ];
+        
+        handlePositions.forEach(pos => {
+          // Draw handle with shadow for depth
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+          ctx.shadowBlur = 4;
+          ctx.shadowOffsetX = 1;
+          ctx.shadowOffsetY = 1;
+          
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, 6, 0, Math.PI * 2);
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fill();
+          ctx.strokeStyle = '#00BFFF';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          
+          // Reset shadow
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+        });
         
         // Label with size
-        ctx.font = '12px Arial';
+        ctx.font = 'bold 12px Arial';
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Add text shadow for better visibility
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+        ctx.shadowBlur = 3;
+        ctx.shadowOffsetX = 1;
+        ctx.shadowOffsetY = 1;
         ctx.fillText(`${Math.round(area.radius)}px`, area.x, area.y);
+        
+        // Reset shadow
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
       }
     });
   };
@@ -131,6 +184,8 @@ const CircularAreaSelector: React.FC<CircularAreaSelectorProps> = ({
     };
   };
 
+  // handleCanvasClick functionality is now integrated into handleMouseDown
+
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (disabled || !image) return;
     
@@ -139,12 +194,27 @@ const CircularAreaSelector: React.FC<CircularAreaSelectorProps> = ({
     
     const mousePos = getMousePos(canvas, e);
     
-    // Check if clicking on an existing circle's resize handle
+    // Check if clicking on an existing circle's resize handle with improved hit detection
     const resizeHandleIndex = areas.findIndex(area => {
-      const handleX = area.x + area.radius;
-      const handleY = area.y;
-      const distance = Math.sqrt(Math.pow(mousePos.x - handleX, 2) + Math.pow(mousePos.y - handleY, 2));
-      return distance <= 6;
+      // Check all resize handles (right, left, top, bottom)
+      const rightHandleX = area.x + area.radius;
+      const rightHandleY = area.y;
+      const rightDistance = Math.sqrt(Math.pow(mousePos.x - rightHandleX, 2) + Math.pow(mousePos.y - rightHandleY, 2));
+      
+      const leftHandleX = area.x - area.radius;
+      const leftHandleY = area.y;
+      const leftDistance = Math.sqrt(Math.pow(mousePos.x - leftHandleX, 2) + Math.pow(mousePos.y - leftHandleY, 2));
+      
+      const topHandleX = area.x;
+      const topHandleY = area.y - area.radius;
+      const topDistance = Math.sqrt(Math.pow(mousePos.x - topHandleX, 2) + Math.pow(mousePos.y - topHandleY, 2));
+      
+      const bottomHandleX = area.x;
+      const bottomHandleY = area.y + area.radius;
+      const bottomDistance = Math.sqrt(Math.pow(mousePos.x - bottomHandleX, 2) + Math.pow(mousePos.y - bottomHandleY, 2));
+      
+      // Check if any handle is clicked (increased hit area to 8px for better UX)
+      return Math.min(rightDistance, leftDistance, topDistance, bottomDistance) <= 8;
     });
     
     if (resizeHandleIndex !== -1) {
@@ -155,10 +225,11 @@ const CircularAreaSelector: React.FC<CircularAreaSelectorProps> = ({
       return;
     }
     
-    // Check if clicking on an existing circle
+    // Check if clicking on an existing circle with improved hit detection
     const clickedAreaIndex = areas.findIndex(area => {
       const distance = Math.sqrt(Math.pow(mousePos.x - area.x, 2) + Math.pow(mousePos.y - area.y, 2));
-      return distance <= area.radius;
+      // Add a small buffer (3px) to make selection easier
+      return distance <= (area.radius + 3);
     });
     
     if (clickedAreaIndex !== -1) {
@@ -169,7 +240,7 @@ const CircularAreaSelector: React.FC<CircularAreaSelectorProps> = ({
       return;
     }
     
-    // Create a new circle
+    // Create a new area when clicking on empty space
     const newArea: CircleArea = {
       id: Date.now().toString(),
       x: mousePos.x,
@@ -178,8 +249,12 @@ const CircularAreaSelector: React.FC<CircularAreaSelectorProps> = ({
       blurIntensity: 50
     };
     
-    setAreas([...areas, newArea]);
-    setSelectedAreaIndex(areas.length);
+    // Add the new area and set it as selected
+    const updatedAreas = [...areas, newArea];
+    setAreas(updatedAreas);
+    setSelectedAreaIndex(updatedAreas.length - 1);
+    
+    // Set up for potential dragging
     setIsDragging(true);
     setIsResizing(false);
     setStartPoint(mousePos);
@@ -194,16 +269,24 @@ const CircularAreaSelector: React.FC<CircularAreaSelectorProps> = ({
     const mousePos = getMousePos(canvas, e);
     
     if (isDragging) {
-      // Move the selected circle
+      // Move the selected circle with boundary constraints
       const dx = mousePos.x - startPoint.x;
       const dy = mousePos.y - startPoint.y;
       
       setAreas(areas.map((area, index) => {
         if (index === selectedAreaIndex) {
+          // Calculate new position
+          const newX = area.x + dx;
+          const newY = area.y + dy;
+          
+          // Apply boundary constraints to keep circle within canvas
+          const constrainedX = Math.max(area.radius, Math.min(canvas.width - area.radius, newX));
+          const constrainedY = Math.max(area.radius, Math.min(canvas.height - area.radius, newY));
+          
           return {
             ...area,
-            x: area.x + dx,
-            y: area.y + dy
+            x: constrainedX,
+            y: constrainedY
           };
         }
         return area;
@@ -211,12 +294,35 @@ const CircularAreaSelector: React.FC<CircularAreaSelectorProps> = ({
       
       setStartPoint(mousePos);
     } else if (isResizing) {
-      // Resize the selected circle
+      // Resize the selected circle with smooth constraints
       const selectedArea = areas[selectedAreaIndex];
-      const newRadius = Math.max(10, Math.sqrt(
-        Math.pow(mousePos.x - selectedArea.x, 2) + 
-        Math.pow(mousePos.y - selectedArea.y, 2)
-      ));
+      
+      // Calculate distance from center to mouse position
+      const dx = mousePos.x - selectedArea.x;
+      const dy = mousePos.y - selectedArea.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // Apply minimum and maximum constraints with smooth clamping
+      const minRadius = 10; // Minimum radius
+      const maxRadius = Math.min(canvas.width, canvas.height) / 2; // Maximum radius (half of the smaller dimension)
+      
+      // Apply smooth easing for better UX when approaching min/max
+      let newRadius = distance;
+      
+      // Apply minimum constraint with smooth transition
+      if (distance < minRadius + 5) {
+        const t = (distance - minRadius) / 5; // Transition factor (0 to 1)
+        newRadius = minRadius + (distance - minRadius) * Math.max(0, t);
+      }
+      
+      // Apply maximum constraint with smooth transition
+      if (distance > maxRadius - 10) {
+        const t = (maxRadius - distance) / 10; // Transition factor (0 to 1)
+        newRadius = maxRadius - (maxRadius - distance) * Math.max(0, t);
+      }
+      
+      // Ensure radius stays within absolute bounds
+      newRadius = Math.max(minRadius, Math.min(maxRadius, newRadius));
       
       setAreas(areas.map((area, index) => {
         if (index === selectedAreaIndex) {
