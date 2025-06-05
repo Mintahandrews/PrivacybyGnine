@@ -46,6 +46,23 @@ function App() {
   const imageRef = useRef<HTMLImageElement | null>(null);
   const timeoutRef = useRef<number | null>(null);
 
+  // Add meta viewport tag for proper mobile scaling
+  useEffect(() => {
+    // Check if viewport meta tag exists
+    let viewportMeta = document.querySelector('meta[name="viewport"]') as HTMLMetaElement | null;
+    
+    // If it doesn't exist, create and add it
+    if (!viewportMeta) {
+      viewportMeta = document.createElement('meta');
+      viewportMeta.name = 'viewport';
+      viewportMeta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+      document.getElementsByTagName('head')[0].appendChild(viewportMeta);
+    } else {
+      // Update existing viewport meta
+      viewportMeta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    }
+  }, []);
+
   // Load TensorFlow.js model
   useEffect(() => {
     async function loadModel() {
@@ -409,8 +426,8 @@ function App() {
           </div>
         )}
 
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden p-3 sm:p-6 mb-4 sm:mb-8">
-          <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-4 text-gray-800">Upload Image</h2>
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden p-4 sm:p-6 mb-5 sm:mb-8">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800">Upload Image</h2>
           <ImageUploader onImageUpload={handleImageUpload} />
         </div>
 
@@ -435,31 +452,34 @@ function App() {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={handleReset}
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="inline-flex items-center px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  style={{ minHeight: '44px' }} /* Better touch target */
                 >
-                  <RefreshCw className="w-4 h-4 mr-2" />
+                  <RefreshCw className="w-5 h-5 mr-2" />
                   Reset
                 </button>
                 <button
                   onClick={() => setIsCircleSelectMode(!isCircleSelectMode)}
-                  className={`inline-flex items-center px-2 sm:px-3 py-1 sm:py-2 border rounded-md shadow-sm text-xs sm:text-sm font-medium ${isCircleSelectMode ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 bg-white text-gray-700'} hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                  className={`inline-flex items-center px-3 py-2.5 border rounded-lg shadow-sm text-sm font-medium ${isCircleSelectMode ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 bg-white text-gray-700'} hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                  style={{ minHeight: '44px' }} /* Better touch target */
                 >
-                  <Circle className="w-4 h-4 mr-2" />
+                  <Circle className="w-5 h-5 mr-2" />
                   {isCircleSelectMode ? 'Exit Selection' : 'Select Areas'}
                 </button>
                 {isCircleSelectMode && (
                   <button
                     onClick={() => setCircleBlurMode(circleBlurMode === 'blur' ? 'hide' : 'blur')}
-                    className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="inline-flex items-center px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    style={{ minHeight: '44px' }} /* Better touch target */
                   >
                     {circleBlurMode === 'blur' ? (
                       <>
-                        <Eye className="w-4 h-4 mr-2" />
+                        <Eye className="w-5 h-5 mr-2" />
                         Blur Areas
                       </>
                     ) : (
                       <>
-                        <EyeOff className="w-4 h-4 mr-2" />
+                        <EyeOff className="w-5 h-5 mr-2" />
                         Hide Areas
                       </>
                     )}
@@ -484,15 +504,9 @@ function App() {
             ) : (
               <div className="relative border border-gray-300 rounded-lg overflow-hidden">
                 <CircularAreaSelector
-                  imageUrl={originalImage}
-                  onAreasChange={setCircleAreas}
-                  containerWidth={Math.min(window.innerWidth - 40, imageDimensions.width, 800)}
-                  containerHeight={
-                    imageDimensions.width > 0 ? 
-                      (Math.min(window.innerWidth - 40, imageDimensions.width, 800) * 
-                       imageDimensions.height / imageDimensions.width) : 
-                      Math.min(600, window.innerHeight * 0.6)
-                  }
+                  image={imageRef.current}
+                  areas={circleAreas}
+                  setAreas={setCircleAreas}
                   disabled={isProcessing}
                 />
               </div>

@@ -2,7 +2,11 @@ import * as tf from '@tensorflow/tfjs';
 import { CircleArea } from '../components/CircularAreaSelector';
 
 // Cache for storing computed kernels to reduce redundant calculations
-const kernelCache: Record<number, tf.Tensor4D> = {};
+const kernelCache: Record<string, {
+  kernel: tf.Tensor4D,
+  hKernel?: tf.Tensor4D,
+  vKernel?: tf.Tensor4D
+}> = {};
 
 
 /**
@@ -81,12 +85,16 @@ export const applyCircularBlurs = async (
         const kernelSize = Math.max(3, Math.floor(sigma * 3)) | 1; // Ensure odd kernel size and force odd with bitwise OR
         
         // Use cached kernel if available to improve performance
-        const cacheKey = Math.round(sigma * 100); // Use rounded sigma as cache key
+        const cacheKey = `sigma_${Math.round(sigma * 100)}`; // Use rounded sigma as cache key
         let rgbKernel: tf.Tensor4D;
+        let hRgbKernel: tf.Tensor4D | undefined;
+        let vRgbKernel: tf.Tensor4D | undefined;
         
         if (kernelCache[cacheKey]) {
-          // Use cached kernel
-          rgbKernel = kernelCache[cacheKey];
+          // Use cached kernels
+          rgbKernel = kernelCache[cacheKey].kernel;
+          hRgbKernel = kernelCache[cacheKey].hKernel;
+          vRgbKernel = kernelCache[cacheKey].vKernel;
         } else {
           // Use separable convolution for better performance
           // Create 1D Gaussian kernel
@@ -108,11 +116,11 @@ export const applyCircularBlurs = async (
           const vKernel = tf.reshape(gauss, [kernelSize, 1, 1, 1]);
           
           // Create separate kernels for each channel by repeating the base kernel
-          const hRgbKernel = tf.concat([
+          hRgbKernel = tf.concat([
             hKernel, hKernel, hKernel
           ], 2).asType('float32') as tf.Tensor4D;
           
-          const vRgbKernel = tf.concat([
+          vRgbKernel = tf.concat([
             vKernel, vKernel, vKernel
           ], 2).asType('float32') as tf.Tensor4D;
           
@@ -131,10 +139,14 @@ export const applyCircularBlurs = async (
           });
           
           // Store in cache for future use
-          kernelCache[cacheKey] = rgbKernel;
+          kernelCache[cacheKey] = {
+            kernel: rgbKernel,
+            hKernel: hRgbKernel,
+            vKernel: vRgbKernel
+          };
           
           // Clean up intermediate tensors
-          tf.dispose([gauss, hKernel, vKernel, hRgbKernel, vRgbKernel]);
+          tf.dispose([gauss, hKernel, vKernel]);
         }
         
         // Apply two-pass separable convolution for better performance
@@ -142,24 +154,38 @@ export const applyCircularBlurs = async (
           // Expand input for convolution
           const expandedInput = imageTensor.expandDims(0).asType('float32') as tf.Tensor4D;
           
-          // Apply horizontal blur first
-          const hBlurred = tf.depthwiseConv2d(
-            expandedInput,
-            rgbKernel,
-            [1, 1],
-            'same'
-          );
-          
-          // Apply vertical blur to complete the Gaussian blur
-          const blurred = tf.depthwiseConv2d(
-            hBlurred,
-            rgbKernel,
-            [1, 1],
-            'same'
-          );
-          
-          // Return the result as a 3D tensor
-          return tf.squeeze(blurred, [0]) as tf.Tensor3D;
+          // Use separable convolution if available (much faster)
+          if (hRgbKernel && vRgbKernel) {
+            // Apply horizontal blur first
+            const hBlurred = tf.depthwiseConv2d(
+              expandedInput,
+              hRgbKernel,
+              [1, 1],
+              'same'
+            );
+            
+            // Apply vertical blur to complete the Gaussian blur
+            const blurred = tf.depthwiseConv2d(
+              hBlurred,
+              vRgbKernel,
+              [1, 1],
+              'same'
+            );
+            
+            // Return the result as a 3D tensor
+            return tf.squeeze(blurred, [0]) as tf.Tensor3D;
+          } else {
+            // Fallback to standard convolution if separable kernels aren't available
+            const blurred = tf.depthwiseConv2d(
+              expandedInput,
+              rgbKernel,
+              [1, 1],
+              'same'
+            );
+            
+            // Return the result as a 3D tensor
+            return tf.squeeze(blurred, [0]) as tf.Tensor3D;
+          }
         });
       });
     });
