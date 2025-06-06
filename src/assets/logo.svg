@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shield background -->
+  <path d="M256 40C256 40 96 88 96 88C96 88 96 224 96 320C96 416 256 472 256 472C256 472 416 416 416 320C416 224 416 88 416 88C416 88 256 40 256 40Z" fill="#3B82F6" stroke="#1E40AF" stroke-width="16"/>
+  
+  <!-- Inner shield gradient -->
+  <path d="M256 72C256 72 128 112 128 112C128 112 128 224 128 304C128 384 256 432 256 432C256 432 384 384 384 304C384 224 384 112 384 112C384 112 256 72 256 72Z" fill="url(#shield_gradient)"/>
+  
+  <!-- Eye shape -->
+  <ellipse cx="256" cy="240" rx="100" ry="60" fill="white" stroke="#1E40AF" stroke-width="8"/>
+  
+  <!-- Iris -->
+  <circle cx="256" cy="240" r="40" fill="#1E40AF"/>
+  
+  <!-- Pupil -->
+  <circle cx="256" cy="240" r="20" fill="black"/>
+  
+  <!-- Highlight -->
+  <circle cx="236" cy="220" r="10" fill="white"/>
+  
+  <!-- Privacy blur effect - horizontal lines -->
+  <g opacity="0.7">
+    <rect x="156" y="220" width="200" height="8" rx="4" fill="white"/>
+    <rect x="156" y="240" width="200" height="8" rx="4" fill="white"/>
+    <rect x="156" y="260" width="200" height="8" rx="4" fill="white"/>
+  </g>
+  
+  <!-- Gradient definition -->
+  <defs>
+    <linearGradient id="shield_gradient" x1="256" y1="72" x2="256" y2="432" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+</svg>
