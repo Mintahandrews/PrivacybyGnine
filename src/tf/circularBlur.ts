@@ -66,7 +66,7 @@ export const applyCircularBlurs = async (
               0,
               Math.PI * 2
             );
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = 'white';
             ctx.fill();
           } else if (area.shapeType === 'rectangle') {
             const rectArea = area as RectangleArea;
@@ -77,7 +77,7 @@ export const applyCircularBlurs = async (
             
             ctx.beginPath();
             ctx.rect(x - rectWidth/2, y - rectHeight/2, rectWidth, rectHeight);
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = 'white';
             ctx.fill();
           } else if (area.shapeType === 'ellipse') {
             const ellipseArea = area as EllipseArea;
@@ -88,7 +88,7 @@ export const applyCircularBlurs = async (
             
             ctx.beginPath();
             ctx.ellipse(x, y, radiusX, radiusY, 0, 0, Math.PI * 2);
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = 'white';
             ctx.fill();
           }
         });
@@ -180,24 +180,9 @@ export const applyCircularBlurs = async (
         
         // Apply two-pass separable convolution for better performance
         return tf.tidy(() => {
-          // Convert to grayscale first for colorless blur
-          const grayImage = tf.tidy(() => {
-            // Use standard RGB to grayscale conversion: 0.299 * R + 0.587 * G + 0.114 * B
-            const rgb = tf.split(imageTensor, 3, 2);
-            const grayChannel = tf.add(
-              tf.add(
-                tf.mul(rgb[0], tf.scalar(0.299)),
-                tf.mul(rgb[1], tf.scalar(0.587))
-              ),
-              tf.mul(rgb[2], tf.scalar(0.114))
-            );
-            
-            // Repeat the grayscale channel 3 times to create an RGB tensor
-            return tf.concat([grayChannel, grayChannel, grayChannel], 2);
-          });
-          
+          // Use the original image colors for a colorful blur effect
           // Expand input for convolution
-          const expandedInput = grayImage.expandDims(0).asType('float32') as tf.Tensor4D;
+          const expandedInput = imageTensor.expandDims(0).asType('float32') as tf.Tensor4D;
           
           // Use separable convolution if available (much faster)
           if (hRgbKernel && vRgbKernel) {
@@ -288,8 +273,8 @@ export const applyCircularBlurs = async (
               x, y, radius                  // Outer circle
             );
             
-            gradient.addColorStop(0, 'black');
-            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            gradient.addColorStop(0, 'white');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
             
             // Draw feathered circle
             ctx.beginPath();
@@ -300,13 +285,13 @@ export const applyCircularBlurs = async (
             // Draw solid inner circle
             ctx.beginPath();
             ctx.arc(x, y, radius - featherAmount, 0, Math.PI * 2);
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = 'white';
             ctx.fill();
           } else {
             // Simple circle without feathering
             ctx.beginPath();
             ctx.arc(x, y, radius, 0, Math.PI * 2);
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = 'white';
             ctx.fill();
           }
         } else if (area.shapeType === 'rectangle') {
@@ -331,7 +316,7 @@ export const applyCircularBlurs = async (
               width - featherAmount * 2, 
               height - featherAmount * 2
             );
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = 'white';
             ctx.fill();
             
             // Then draw the feathered edges
@@ -340,8 +325,8 @@ export const applyCircularBlurs = async (
               x - halfWidth, y - halfHeight + featherAmount,
               x - halfWidth, y - halfHeight
             );
-            topGradient.addColorStop(0, 'black');
-            topGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            topGradient.addColorStop(0, 'white');
+            topGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
             ctx.fillStyle = topGradient;
             ctx.fillRect(x - halfWidth, y - halfHeight, width, featherAmount);
             
@@ -350,8 +335,8 @@ export const applyCircularBlurs = async (
               x - halfWidth, y + halfHeight - featherAmount,
               x - halfWidth, y + halfHeight
             );
-            bottomGradient.addColorStop(0, 'black');
-            bottomGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            bottomGradient.addColorStop(0, 'white');
+            bottomGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
             ctx.fillStyle = bottomGradient;
             ctx.fillRect(x - halfWidth, y + halfHeight - featherAmount, width, featherAmount);
             
@@ -360,8 +345,8 @@ export const applyCircularBlurs = async (
               x - halfWidth + featherAmount, y - halfHeight,
               x - halfWidth, y - halfHeight
             );
-            leftGradient.addColorStop(0, 'black');
-            leftGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            leftGradient.addColorStop(0, 'white');
+            leftGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
             ctx.fillStyle = leftGradient;
             ctx.fillRect(x - halfWidth, y - halfHeight, featherAmount, height);
             
@@ -370,15 +355,15 @@ export const applyCircularBlurs = async (
               x + halfWidth - featherAmount, y - halfHeight,
               x + halfWidth, y - halfHeight
             );
-            rightGradient.addColorStop(0, 'black');
-            rightGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            rightGradient.addColorStop(0, 'white');
+            rightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
             ctx.fillStyle = rightGradient;
             ctx.fillRect(x + halfWidth - featherAmount, y - halfHeight, featherAmount, height);
           } else {
             // Simple rectangle without feathering
             ctx.beginPath();
             ctx.rect(x - halfWidth, y - halfHeight, width, height);
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = 'white';
             ctx.fill();
           }
         } else if (area.shapeType === 'ellipse') {
@@ -395,7 +380,7 @@ export const applyCircularBlurs = async (
             // Draw the solid inner ellipse
             ctx.beginPath();
             ctx.ellipse(x, y, radiusX - featherAmount, radiusY - featherAmount, 0, 0, Math.PI * 2);
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = 'white';
             ctx.fill();
             
             // Draw the feathered outer ellipse using a radial gradient
@@ -414,14 +399,14 @@ export const applyCircularBlurs = async (
               // Draw the elliptical ring
               ctx.beginPath();
               ctx.ellipse(x, y, outerRadiusX, outerRadiusY, 0, 0, Math.PI * 2);
-              ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
+              ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
               ctx.fill();
             }
           } else {
             // Simple ellipse without feathering
             ctx.beginPath();
             ctx.ellipse(x, y, radiusX, radiusY, 0, 0, Math.PI * 2);
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = 'white';
             ctx.fill();
           }
         }
