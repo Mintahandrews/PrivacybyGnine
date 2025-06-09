@@ -2,14 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import "./index.css";
 import * as tf from "@tensorflow/tfjs";
 import Logo from "./components/Logo";
-import {
-  Circle,
-  Eye,
-  EyeOff,
-  RefreshCw,
-  Save,
-  Square,
-} from "lucide-react";
+import { Circle, Eye, EyeOff, RefreshCw, Save, Square, X, Download } from "lucide-react";
 import { saveAs } from "file-saver";
 
 import {
@@ -474,20 +467,17 @@ function App() {
   };
 
   return (
-    <div
-      className="min-h-screen w-full bg-gradient-to-br from-gray-50 to-gray-100"
-      style={{ fontFamily: "Inter, sans-serif" }}
-    >
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-6 pb-24 sm:pb-6 safe-bottom">
       <div className="container px-3 sm:px-4 py-4 sm:py-8 mx-auto max-w-full sm:max-w-5xl">
         <header className="text-center mb-6 sm:mb-12">
           <div className="flex items-center justify-center mb-2">
-            <Logo size="large" className="mr-3" />
-            <h1
-              className="text-3xl sm:text-4xl font-bold text-gray-800"
-              style={{ fontFamily: "Montserrat, sans-serif" }}
-            >
+            <Logo size="medium" />
+            <h2 className="text-lg sm:text-xl font-semibold">
               PrivacyGnine
-            </h1>
+            </h2>
+            <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">
+              Pro
+            </span>
           </div>
           <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto px-2">
             Protect your privacy with browser-based image anonymization. No data
@@ -699,6 +689,128 @@ function App() {
           </p>
         </footer>
       </div>
+      <main className="max-w-4xl mx-auto">
+        {/* Mobile bottom navigation */}
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 p-2 flex justify-around items-center shadow-lg">
+          <button
+            onClick={handleReset}
+            className="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 transition-colors"
+          >
+            <RefreshCw className="w-6 h-6" />
+            <span className="text-xs mt-1">Reset</span>
+          </button>
+          <button
+            onClick={() => setIsCircleSelectMode(!isCircleSelectMode)}
+            className={`flex flex-col items-center justify-center p-2 rounded-full ${
+              isCircleSelectMode ? 'text-white bg-blue-600' : 'text-gray-600 hover:text-blue-600'
+            } transition-colors`}
+            style={{
+              width: '60px',
+              height: '60px',
+              marginTop: '-20px',
+              boxShadow: isCircleSelectMode ? '0 4px 12px rgba(37, 99, 235, 0.3)' : 'none'
+            }}
+          >
+            {isCircleSelectMode ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Circle className="w-6 h-6" />
+            )}
+            <span className="text-xs mt-1">
+              {isCircleSelectMode ? 'Done' : 'Select'}
+            </span>
+          </button>
+          <button
+            onClick={handleDownload}
+            disabled={!processedImage}
+            className={`flex flex-col items-center justify-center p-2 ${
+              processedImage ? 'text-green-600 hover:text-green-700' : 'text-gray-400'
+            } transition-colors`}
+          >
+            <Download className="w-6 h-6" />
+            <span className="text-xs mt-1">Save</span>
+          </button>
+        </div>
+        {/* Mobile shape selector modal */}
+        {isCircleSelectMode && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-end sm:hidden">
+            <div className="bg-white w-full rounded-t-2xl p-4 pt-6 shadow-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Select Shape</h3>
+                <button 
+                  onClick={() => setIsCircleSelectMode(false)}
+                  className="text-gray-500"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <button
+                  onClick={() => setSelectedShapeType("circle")}
+                  className={`flex flex-col items-center justify-center p-4 rounded-xl ${
+                    selectedShapeType === "circle" 
+                      ? 'bg-blue-50 text-blue-600 border-2 border-blue-200' 
+                      : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  <Circle className="w-8 h-8 mb-2" />
+                  <span className="text-sm font-medium">Circle</span>
+                </button>
+                
+                <button
+                  onClick={() => setSelectedShapeType("rectangle")}
+                  className={`flex flex-col items-center justify-center p-4 rounded-xl ${
+                    selectedShapeType === "rectangle" 
+                      ? 'bg-blue-50 text-blue-600 border-2 border-blue-200' 
+                      : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  <Square className="w-8 h-8 mb-2" />
+                  <span className="text-sm font-medium">Rectangle</span>
+                </button>
+                
+                <button
+                  onClick={() => setSelectedShapeType("ellipse")}
+                  className={`flex flex-col items-center justify-center p-4 rounded-xl ${
+                    selectedShapeType === "ellipse" 
+                      ? 'bg-blue-50 text-blue-600 border-2 border-blue-200' 
+                      : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  <svg className="w-8 h-8 mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <ellipse cx="12" cy="12" rx="10" ry="6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span className="text-sm font-medium">Ellipse</span>
+                </button>
+              </div>
+              
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setCircleBlurMode(circleBlurMode === "blur" ? "hide" : "blur")}
+                  className={`w-full py-3 px-4 rounded-lg flex items-center justify-center ${
+                    circleBlurMode === "blur" 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-800'
+                  } font-medium`}
+                >
+                  {circleBlurMode === "blur" ? (
+                    <>
+                      <Eye className="w-5 h-5 mr-2" />
+                      Switch to Hide Mode
+                    </>
+                  ) : (
+                    <>
+                      <EyeOff className="w-5 h-5 mr-2" />
+                      Switch to Blur Mode
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
