@@ -4,9 +4,9 @@ import * as tf from "@tensorflow/tfjs";
 import Logo from "./components/Logo";
 import {
   Circle,
-  Edit,
   Eye,
   EyeOff,
+  RefreshCw,
   Save,
   Square,
 } from "lucide-react";
@@ -473,14 +473,6 @@ function App() {
     }
   };
 
-  const toggleCircleSelectMode = () => {
-    setIsCircleSelectMode(!isCircleSelectMode);
-  };
-
-  const toggleCircleBlurMode = () => {
-    setCircleBlurMode(circleBlurMode === "blur" ? "hide" : "blur");
-  };
-
   return (
     <div
       className="min-h-screen w-full bg-gradient-to-br from-gray-50 to-gray-100"
@@ -542,41 +534,25 @@ function App() {
                 Image Preview
               </h2>
               <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                <button
-                  onClick={toggleCircleSelectMode}
-                  className={`flex-1 sm:flex-initial inline-flex items-center justify-center px-3 py-2.5 border rounded-lg shadow-sm text-sm font-medium ${
-                    isCircleSelectMode
                       ? "border-blue-500 bg-blue-50 text-blue-700"
                       : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
-                  style={{ minHeight: "44px", minWidth: "130px" }}
-                >
-                  {isCircleSelectMode ? (
-                    <>
-                      <Edit className="w-5 h-5 mr-2" />
-                      Done Selecting
-                    </>
-                  ) : (
-                    <>
-                      <Edit className="w-5 h-5 mr-2" />
-                      Select Areas
-                    </>
-                  )}
-                </button>
-                {isCircleSelectMode && (
-                  <>
-                    <button
-                      onClick={toggleCircleBlurMode}
-                      className={`flex-1 sm:flex-initial inline-flex items-center justify-center px-3 py-2.5 border rounded-lg shadow-sm text-sm font-medium ${
-                        circleBlurMode === "blur"
-                          ? "border-blue-500 bg-blue-50 text-blue-700"
-                          : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                       } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
-                      style={{ minHeight: "44px", minWidth: "120px" }}
-                    >
-                      {circleBlurMode === "blur" ? (
-                        <>
-                          <Eye className="w-5 h-5 mr-2" />
+                    style={{ minHeight: "44px", minWidth: "130px" }} /* Better touch target */
+                  >
+                    {isCircleSelectMode ? (
+                      <>
+                        <Edit className="w-5 h-5 mr-2" />
+                        Done Selecting
+                      </>
+                    ) : (
+                      <>
+                        <Edit className="w-5 h-5 mr-2" />
+                        Select Areas
+                      </>
+                    )}
+                  </button>
+                  {isCircleSelectMode && (
+                    <>
                           Blur Areas
                         </>
                       ) : (
@@ -619,20 +595,11 @@ function App() {
                       ? "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
                       : "border-green-500 bg-green-50 text-green-700 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                   }`}
-                  style={{ minHeight: "44px", minWidth: "120px" }}
+                  style={{ minHeight: "44px", minWidth: "120px" }} /* Better touch target */
                 >
                   <Save className="w-5 h-5 mr-2" />
                   Download
                 </button>
-                {processedImage && (
-                  <button
-                    onClick={handleReset}
-                    className="flex-1 sm:flex-initial inline-flex items-center justify-center px-3 py-2.5 border rounded-lg shadow-sm text-sm font-medium border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    style={{ minHeight: "44px", minWidth: "120px" }}
-                  >
-                    Reset
-                  </button>
-                )}
               </div>
             </div>
 

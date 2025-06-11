@@ -26,9 +26,11 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
         img.onload = () => {
           // Calculate optimal responsive dimensions while preserving aspect ratio
           const viewportWidth = window.innerWidth;
-          // Use smaller dimensions on mobile devices
-          const maxWidth = viewportWidth < 640 ? viewportWidth - 40 : 640;
-          const maxHeight = viewportWidth < 640 ? window.innerHeight * 0.4 : 480;
+          const isMobile = viewportWidth < 640;
+          
+          // Use smaller dimensions on mobile devices with better proportions
+          const maxWidth = isMobile ? viewportWidth - 32 : 640;
+          const maxHeight = isMobile ? window.innerHeight * 0.35 : 480;
           let width = img.width;
           let height = img.height;
           
@@ -186,84 +188,27 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
   }
 
   return (
-    <div className="w-full overflow-hidden">
-      {/* Mobile tabs for toggling between original and processed images */}
-      <div className="sm:hidden mb-4 flex border-b border-gray-200">
-        <button
-          className={`flex-1 py-3 px-4 text-center font-medium text-sm ${
-            !processedImage 
-              ? 'border-b-2 border-blue-500 text-blue-600' 
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-          onClick={() => {
-            if (processedImage) {
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-          }}
-        >
-          Original
-        </button>
-        <button
-          className={`flex-1 py-3 px-4 text-center font-medium text-sm ${
-            processedImage 
-              ? 'border-b-2 border-green-500 text-green-600' 
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-          disabled={!processedImage}
-          onClick={() => {
-            if (processedImage) {
-              // Scroll to the processed image section
-              const element = document.getElementById('processed-image');
-              if (element) {
-                element.scrollIntoView({ behavior: 'smooth' });
-              }
-            }
-          }}
-        >
-          {processedImage ? 'Processed' : 'Processing...'}
-        </button>
-      </div>
-
-      {/* Original Image - Full width on mobile, half on larger screens */}
-      <div className={`${processedImage ? 'hidden sm:block' : ''} mb-6 sm:mb-0`}>
-        <p className="text-center font-medium mb-2 text-sm sm:text-base text-gray-700">
-          Original Image
-        </p>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 my-4 sm:my-6">
+      <div>
+        <p className="text-center font-medium mb-1 sm:mb-2 text-sm sm:text-base text-gray-700">Original Image</p>
         <div className="border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center bg-gray-50 p-1 sm:p-2">
-          <canvas 
-            ref={originalCanvasRef} 
-            className="max-w-full h-auto touch-pan-x touch-pan-y"
-            style={{ touchAction: 'pan-x pan-y' }}
-          />
+          <canvas ref={originalCanvasRef} className="max-w-full h-auto" />
         </div>
       </div>
-
-      {/* Processed Image - Full width on mobile, half on larger screens */}
-      {processedImage && (
-        <div id="processed-image" className={`${!processedImage ? 'hidden sm:block' : ''} sm:mt-0`}>
-          <p className="text-center font-medium mb-2 text-sm sm:text-base text-gray-700">
-            Processed Image
-          </p>
-          <div className="border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center bg-gray-50 p-1 sm:p-2">
-            <canvas 
-              ref={processedCanvasRef} 
-              className="max-w-full h-auto touch-pan-x touch-pan-y"
-              style={{ touchAction: 'pan-x pan-y' }}
-            />
-          </div>
+      <div>
+        <p className="text-center font-medium mb-1 sm:mb-2 text-sm sm:text-base text-gray-700">Processed Image</p>
+        <div className="border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center bg-gray-50 p-1 sm:p-2">
+          {processedImage ? (
+            <canvas ref={processedCanvasRef} className="max-w-full h-auto" />
+          ) : (
+            <div className="w-full h-full min-h-[100px] sm:min-h-[150px] flex items-center justify-center p-4 sm:p-6">
+              <p className="text-gray-500 text-xs sm:text-sm">
+                {originalImage ? "Processing..." : "No image processed"}
+              </p>
+            </div>
+          )}
         </div>
-      )}
-      
-      {!processedImage && originalImage && (
-        <div className="mt-4 p-4 bg-blue-50 rounded-lg text-center">
-          <p className="text-blue-700 text-sm sm:text-base">
-            Processing your image... This may take a moment.
-          </p>
-          <div className="mt-2 h-1.5 w-full bg-blue-100 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-500 rounded-full animate-pulse" style={{ width: '80%' }}></div>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 };
